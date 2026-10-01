@@ -1,50 +1,40 @@
-#Normal workflow setup
-# name: CI
-
-# on:
-#   push:
-#     branches:
-#       - main
-
-# resuable workflow
 name: Reusable CI
 
 on:
   workflow_call:
-  
-     secrets:
-       DEMO_SECRET:
+
+    inputs:
+      app_name:
+        description: "Application name"
+        required: true
+        type: string
+
+      run_lint:
+        description: "Run linting"
+        required: false
+        type: boolean
+        default: true
+
+    secrets:
+      DEMO_SECRET:
         description: "Demo secret"
         required: true
-       
-     inputs:
-        app_name:
-          description: "Application name"
-          required: true
-          type: string
-  
-        run_lint:
-          description: "Run linting"
-          required: false
-          type: boolean
-          default: true
-   
 
-    
 jobs:
-  testjob:  #Name of job 
-    runs-on: ubuntu-latest   # select runner
 
-#first step to checkout code
-    steps:             
-      - name: Checkout code                    
+  testjob:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Run test
         run: |
           echo "Hello from reusable workflow"
           echo "Repository: ${{ github.repository }}"
-          
+
       - name: Show inputs
         run: |
           echo "Application: ${{ inputs.app_name }}"
@@ -55,8 +45,27 @@ jobs:
           echo "Reusable workflow is working"
           echo "Application = ${{ inputs.app_name }}"
 
-      - name: demo secret
-        run: | 
-           echo "accessing secret"
-           
-   
+      - name: Demo secret
+        run: |
+          echo "Secret is available"
+
+
+  lint:
+    if: ${{ inputs.run_lint }}
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Run Ruff
+        run: ruff check .
