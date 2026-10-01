@@ -1,1 +1,28 @@
+#Normal workflow setup
+# name: CI
 
+# on:
+#   push:
+#     branches:
+#       - main
+
+# resuable workflow
+name: Reusable CI
+
+on:
+  workflow_call:
+
+jobs:
+  testjob:  #Name of job 
+    runs-on: ubuntu-latest   # select runner
+
+#first step to checkout code
+    steps:             
+      - name: Checkout code                    
+        uses: actions/checkout@v4
+
+      - name: Run test
+        run: |
+          echo "Hello from reusable workflow"
+          echo "Repository: ${{ github.repository }}"
+   
