@@ -23,6 +23,7 @@ on:
 jobs:
 
   testjob:
+    needs: lint
     runs-on: ubuntu-latest
 
     steps:
