@@ -12,6 +12,18 @@ name: Reusable CI
 on:
   workflow_call:
 
+     inputs:
+        app_name:
+          description: "Application name"
+          required: true
+          type: string
+  
+        run_lint:
+          description: "Run linting"
+          required: false
+          type: boolean
+          default: true
+
 jobs:
   testjob:  #Name of job 
     runs-on: ubuntu-latest   # select runner
@@ -25,4 +37,14 @@ jobs:
         run: |
           echo "Hello from reusable workflow"
           echo "Repository: ${{ github.repository }}"
+          
+      - name: Show inputs
+        run: |
+          echo "Application: ${{ inputs.app_name }}"
+          echo "Run Lint: ${{ inputs.run_lint }}"
+
+      - name: Run basic test
+        run: |
+          echo "Reusable workflow is working"
+          echo "Application = ${{ inputs.app_name }}"
    
