@@ -22,6 +22,12 @@ on:
         
       SONAR_TOKEN:
         required: false
+      SONAR_HOST_URL: 
+         required: false
+      DOCKER_USERNAME: 
+          required: false
+      DOCKER_PASSWORD: 
+          required: false
 
 jobs:
 
