@@ -19,6 +19,9 @@ on:
       DEMO_SECRET:
         description: "Demo secret"
         required: true
+        
+      SONAR_TOKEN:
+        required: false
 
 jobs:
 
