@@ -1,0 +1,56 @@
+
+name: Converge
+
+on:
+  workflow_call:
+    inputs:
+      config:
+        required: false
+        type: string
+        default: "ci/converge.yml"
+        description: "Path to converge config"
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  CONVERGE_CONFIG: ${{ inputs.config }}
+
+jobs:
+
+  info:
+    name: Pipeline Information
+    if: github.event_name != 'delete'
+    uses: YOUR-ORG/cc-org-shared-workflows/.github/workflows/job-info.yaml@main
+    with:
+      workflow_ref: ${{ github.workflow_ref }}
+      config: ${{ inputs.config }}
+
+  docker_build:
+    name: Docker Build
+    needs: info
+    uses: YOUR-ORG/cc-org-shared-workflows/.github/workflows/job-docker-build.yaml@main
+    with:
+      config: ${{ inputs.config }}
+
+  docker_scan:
+    name: Docker Security Scan
+    needs: docker_build
+    uses: YOUR-ORG/cc-org-shared-workflows/.github/workflows/job-docker-scan.yaml@main
+    with:
+      config: ${{ inputs.config }}
+
+  docker_publish:
+    name: Docker Publish
+    needs: docker_scan
+    uses: YOUR-ORG/cc-org-shared-workflows/.github/workflows/job-docker-publish.yaml@main
+    with:
+      config: ${{ inputs.config }}
+
+  docker_smoke:
+    name: Docker Smoke Test
+    needs: docker_publish
+    uses: YOUR-ORG/cc-org-shared-workflows/.github/workflows/job-docker-smoke.yaml@main
+    with:
+      config: ${{ inputs.config }}

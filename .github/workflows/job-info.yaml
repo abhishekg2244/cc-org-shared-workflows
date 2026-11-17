@@ -1,0 +1,52 @@
+# Repository name
+# Branch name
+# Commit SHA
+# Workflow reference
+# Config file path
+
+
+name: Job Info
+
+on:
+  workflow_call:
+    inputs:
+      workflow_ref:
+        description: "Caller workflow reference"
+        required: false
+        type: string
+      config:
+        description: "Path to converge configuration"
+        required: false
+        type: string
+        default: "ci/converge.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  info:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Display pipeline information
+        shell: bash
+        env:
+          WORKFLOW_REF: ${{ inputs.workflow_ref }}
+          CONFIG_FILE: ${{ inputs.config }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          echo "================================"
+          echo "       MARKETINGOS CI INFO"
+          echo "================================"
+
+          echo "Repository : $REPOSITORY"
+          echo "Branch     : $BRANCH"
+          echo "Commit     : $COMMIT_SHA"
+          echo "Event      : $EVENT_NAME"
+          echo "Workflow   : $WORKFLOW_REF"
+          echo "Config     : $CONFIG_FILE"
+
+          echo "================================"

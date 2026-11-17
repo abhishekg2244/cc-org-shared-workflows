@@ -1,0 +1,36 @@
+
+name: Docker Build
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        type: string
+        required: true
+
+      dockerfile:
+        type: string
+        required: true
+
+      context:
+        type: string
+        required: true
+
+      image_name:
+        type: string
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Application
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: |
+          docker build \
+            -f ${{ inputs.dockerfile }} \
+            -t ${{ inputs.image_name }}:${GITHUB_SHA} \
+            ${{ inputs.context }}
