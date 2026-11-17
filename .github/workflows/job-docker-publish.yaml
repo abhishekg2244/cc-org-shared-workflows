@@ -27,7 +27,7 @@ on:
 permissions:
   contents: read
   packages: write
-  actions: read
+#   actions: read
 
 jobs:
   docker-publish:
