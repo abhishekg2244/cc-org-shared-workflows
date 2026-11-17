@@ -1,0 +1,52 @@
+
+name: Job Docker Scan
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        description: "Application service name"
+        required: true
+        type: string
+
+      image_name:
+        description: "Docker image name"
+        required: true
+        type: string
+
+      image_tag:
+        description: "Docker image tag"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  docker-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: image-${{ inputs.service_name }}
+          path: /tmp/docker-image
+
+      - name: Load Docker image
+        run: |
+          docker load -i /tmp/docker-image/image.tar
+
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ inputs.image_name }}:${{ inputs.image_tag }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+
+      - name: Scan completed
+        run: echo "Trivy scan passed for ${{ inputs.service_name }}"
