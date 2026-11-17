@@ -4,11 +4,40 @@ name: Converge
 on:
   workflow_call:
     inputs:
-      config:
-        description: "Path to application converge config"
-        required: false
+      service_name:
+        description: "Application service name"
+        required: true
         type: string
-        default: "ci/converge.yml"
+
+      dockerfile:
+        description: "Dockerfile path"
+        required: true
+        type: string
+
+      context:
+        description: "Docker build context"
+        required: true
+        type: string
+
+      image_name:
+        description: "Full container image name"
+        required: true
+        type: string
+
+      image_tag:
+        description: "Container image tag"
+        required: true
+        type: string
+
+      container_port:
+        description: "Application container port"
+        required: true
+        type: number
+
+      registry:
+        description: "Container registry"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -16,89 +45,54 @@ permissions:
 
 jobs:
 
+  # ---------------- INFO ----------------
+
+  info:
+    uses: abhishekg2244/cc-org-shared-workflows/.github/workflows/job-info.yaml@main
+    with:
+      workflow_ref: ${{ github.workflow_ref }}
+      config: ci/converge.yml
+
   # ---------------- BUILD ----------------
 
   build:
-    strategy:
-      fail-fast: true
-      matrix:
-        service:
-          - name: api
-            dockerfile: api/Dockerfile
-          - name: agent
-            dockerfile: agent/Dockerfile
-          - name: tools
-            dockerfile: tools/Dockerfile
-
+    needs: info
     uses: abhishekg2244/cc-org-shared-workflows/.github/workflows/job-docker-build.yaml@main
-
     with:
-      service_name: ${{ matrix.service.name }}
-      dockerfile: ${{ matrix.service.dockerfile }}
-      context: .
-      image_name: ${{ format('ghcr.io/{0}/marketingos-{1}', github.repository_owner, matrix.service.name) }}
-      image_tag: ${{ github.sha }}
+      service_name: ${{ inputs.service_name }}
+      dockerfile: ${{ inputs.dockerfile }}
+      context: ${{ inputs.context }}
+      image_name: ${{ inputs.image_name }}
+      image_tag: ${{ inputs.image_tag }}
 
   # ---------------- SCAN ----------------
 
   scan:
     needs: build
-
-    strategy:
-      fail-fast: true
-      matrix:
-        service:
-          - name: api
-          - name: agent
-          - name: tools
-
     uses: abhishekg2244/cc-org-shared-workflows/.github/workflows/job-docker-scan.yaml@main
-
     with:
-      service_name: ${{ matrix.service.name }}
-      image_name: ${{ format('ghcr.io/{0}/marketingos-{1}', github.repository_owner, matrix.service.name) }}
-      image_tag: ${{ github.sha }}
+      service_name: ${{ inputs.service_name }}
+      image_name: ${{ inputs.image_name }}
+      image_tag: ${{ inputs.image_tag }}
 
   # ---------------- PUBLISH ----------------
 
   publish:
     needs: scan
-
-    strategy:
-      fail-fast: true
-      matrix:
-        service:
-          - name: api
-          - name: agent
-          - name: tools
-
     uses: abhishekg2244/cc-org-shared-workflows/.github/workflows/job-docker-publish.yaml@main
-
     with:
-      service_name: ${{ matrix.service.name }}
-      image_name: ${{ format('ghcr.io/{0}/marketingos-{1}', github.repository_owner, matrix.service.name) }}
-      image_tag: ${{ github.sha }}
+      service_name: ${{ inputs.service_name }}
+      image_name: ${{ inputs.image_name }}
+      image_tag: ${{ inputs.image_tag }}
+      registry: ${{ inputs.registry }}
 
   # ---------------- SMOKE TEST ----------------
 
   smoke:
     needs: publish
-
-    strategy:
-      fail-fast: true
-      matrix:
-        service:
-          - name: api
-            port: 8000
-          - name: agent
-            port: 8001
-          - name: tools
-            port: 8002
-
     uses: abhishekg2244/cc-org-shared-workflows/.github/workflows/job-docker-smoke.yaml@main
-
     with:
-      service_name: ${{ matrix.service.name }}
-      image_name: ${{ format('ghcr.io/{0}/marketingos-{1}', github.repository_owner, matrix.service.name) }}
-      image_tag: ${{ github.sha }}
-      container_port: ${{ matrix.service.port }}
+      service_name: ${{ inputs.service_name }}
+      image_name: ${{ inputs.image_name }}
+      image_tag: ${{ inputs.image_tag }}
+      container_port: ${{ inputs.container_port }}
