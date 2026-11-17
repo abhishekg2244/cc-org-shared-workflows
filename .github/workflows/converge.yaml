@@ -5,52 +5,100 @@ on:
   workflow_call:
     inputs:
       config:
+        description: "Path to application converge config"
         required: false
         type: string
         default: "ci/converge.yml"
-        description: "Path to converge config"
 
 permissions:
   contents: read
   packages: write
 
-env:
-  CONVERGE_CONFIG: ${{ inputs.config }}
-
 jobs:
 
-  info:
-    name: Pipeline Information
-    if: github.event_name != 'delete'
-    uses: YOUR-ORG/cc-org-shared-workflows/.github/workflows/job-info.yaml@main
-    with:
-      workflow_ref: ${{ github.workflow_ref }}
-      config: ${{ inputs.config }}
+  # ---------------- BUILD ----------------
 
-  docker_build:
-    name: Docker Build
-    needs: info
-    uses: YOUR-ORG/cc-org-shared-workflows/.github/workflows/job-docker-build.yaml@main
-    with:
-      config: ${{ inputs.config }}
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        service:
+          - name: api
+            dockerfile: api/Dockerfile
+          - name: agent
+            dockerfile: agent/Dockerfile
+          - name: tools
+            dockerfile: tools/Dockerfile
 
-  docker_scan:
-    name: Docker Security Scan
-    needs: docker_build
-    uses: YOUR-ORG/cc-org-shared-workflows/.github/workflows/job-docker-scan.yaml@main
-    with:
-      config: ${{ inputs.config }}
+    uses: abhishekg2244/cc-org-shared-workflows/.github/workflows/job-docker-build.yaml@main
 
-  docker_publish:
-    name: Docker Publish
-    needs: docker_scan
-    uses: YOUR-ORG/cc-org-shared-workflows/.github/workflows/job-docker-publish.yaml@main
     with:
-      config: ${{ inputs.config }}
+      service_name: ${{ matrix.service.name }}
+      dockerfile: ${{ matrix.service.dockerfile }}
+      context: .
+      image_name: ${{ format('ghcr.io/{0}/marketingos-{1}', github.repository_owner, matrix.service.name) }}
+      image_tag: ${{ github.sha }}
 
-  docker_smoke:
-    name: Docker Smoke Test
-    needs: docker_publish
-    uses: YOUR-ORG/cc-org-shared-workflows/.github/workflows/job-docker-smoke.yaml@main
+  # ---------------- SCAN ----------------
+
+  scan:
+    needs: build
+
+    strategy:
+      fail-fast: true
+      matrix:
+        service:
+          - name: api
+          - name: agent
+          - name: tools
+
+    uses: abhishekg2244/cc-org-shared-workflows/.github/workflows/job-docker-scan.yaml@main
+
     with:
-      config: ${{ inputs.config }}
+      service_name: ${{ matrix.service.name }}
+      image_name: ${{ format('ghcr.io/{0}/marketingos-{1}', github.repository_owner, matrix.service.name) }}
+      image_tag: ${{ github.sha }}
+
+  # ---------------- PUBLISH ----------------
+
+  publish:
+    needs: scan
+
+    strategy:
+      fail-fast: true
+      matrix:
+        service:
+          - name: api
+          - name: agent
+          - name: tools
+
+    uses: abhishekg2244/cc-org-shared-workflows/.github/workflows/job-docker-publish.yaml@main
+
+    with:
+      service_name: ${{ matrix.service.name }}
+      image_name: ${{ format('ghcr.io/{0}/marketingos-{1}', github.repository_owner, matrix.service.name) }}
+      image_tag: ${{ github.sha }}
+
+  # ---------------- SMOKE TEST ----------------
+
+  smoke:
+    needs: publish
+
+    strategy:
+      fail-fast: true
+      matrix:
+        service:
+          - name: api
+            port: 8000
+          - name: agent
+            port: 8001
+          - name: tools
+            port: 8002
+
+    uses: abhishekg2244/cc-org-shared-workflows/.github/workflows/job-docker-smoke.yaml@main
+
+    with:
+      service_name: ${{ matrix.service.name }}
+      image_name: ${{ format('ghcr.io/{0}/marketingos-{1}', github.repository_owner, matrix.service.name) }}
+      image_tag: ${{ github.sha }}
+      container_port: ${{ matrix.service.port }}
